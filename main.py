@@ -163,3 +163,79 @@ def evaluate(models,X_train,X_test,y_train,y_test):
 
 model_score = evaluate(models = models ,X_train = X_train,X_test = X_test,y_train = y_train,y_test = y_test)
 model_score
+
+# Evaluate model based on hyper parameters
+rf = RandomForestClassifier()
+rf.get_params()   # Checking Various Parameters for RandomForestClassifier
+
+from sklearn.model_selection import cross_val_score,RandomizedSearchCV
+rf_grid = { 'n_estimators': np.arange(10,1000,50),
+            'max_depth': [None,3,5,10],
+            'min_samples_leaf': np.arange(2,20,2),
+            'min_samples_split': np.arange(1,20,2)
+           }
+
+np.random.seed(42)
+
+randomforest = RandomizedSearchCV(RandomForestClassifier(),param_distributions = rf_grid,cv =5, n_iter = 20,verbose= True)
+randomforest.fit(X_train,y_train)
+
+
+# Best Hyper parameter estimates
+randomforest.best_params_   # Best Parameter for RandomForestClassifier Model 
+
+# Best Accuracy of the model
+randomforest.score(X_test,y_test)
+
+# Plotting ROC and AUC Curve
+from sklearn.metrics import roc_curve, auc
+
+# Assuming you have trained a RandomForestClassifier named 'randomforest'
+# and you have test data X_test and corresponding labels y_test
+
+# Get predicted probabilities for the positive class
+y_prob = randomforest.predict_proba(X_test)[:, 1]
+
+# Compute ROC curve and AUC
+fpr, tpr, thresholds = roc_curve(y_test, y_prob)
+roc_auc = auc(fpr, tpr)
+
+# Plot ROC curve
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='red', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic (ROC) Curve')
+plt.legend(loc='lower right')
+plt.grid(True)
+plt.show()
+
+
+## Using Cross Validation technique
+
+cv_acc = cross_val_score(randomforest,X,y,cv = 5,scoring = 'accuracy')
+cv_prec = cross_val_score(randomforest,X,y,cv = 5,scoring = 'precision')
+cv_recall = cross_val_score(randomforest,X,y,cv = 5,scoring = 'recall')
+cv_f1 = cross_val_score(randomforest,X,y,cv = 5,scoring = 'f1')
+
+
+print(f'CV Accuracy Score : {np.mean(cv_acc)*100:.2f} %')
+print(f'CV Precision Score : {np.mean(cv_prec)*100:.2f} %')
+print(f'CV Recall Score : {np.mean(cv_recall)*100:.2f} %')
+print(f'CV F1 Score : {np.mean(cv_f1)*100:.2f} %')
+
+
+CrossvalidationData = pd.DataFrame({'Accuracy':np.mean(cv_acc),
+                                    'Precision':np.mean(cv_prec),
+                                    'Recall':np.mean(cv_recall),
+                                    'F1 Score':np.mean(cv_f1)
+                                     },index = [0])
+CrossvalidationData.T.plot(kind='bar',color = 'lightblue')
+plt.xticks(rotation=0)
+plt.xlabel('model: Random Forest Classifier')
+plt.ylabel('Model Score')
+plt.grid()
+plt.show()
